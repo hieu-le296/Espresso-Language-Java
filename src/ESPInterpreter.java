@@ -1,5 +1,7 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.security.DrbgParameters.NextBytes;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 import java.util.Stack;
 
@@ -9,23 +11,24 @@ import java.util.Stack;
  */
 public class ESPInterpreter {
 
-	private Variable[] variable_table;
+	private Variable[] variableTable;
 	private static String line;
-	public static int LineNo = 0;
+	public static int lineNo = 0;
 
 	/**
 	 * Constructor to initialize the variable, read the text file
+	 * 
 	 * @throws FileNotFoundException
 	 * @throws UndefinedVariableException
 	 * @throws SyntaxError
 	 */
-	public ESPInterpreter() throws FileNotFoundException, UndefinedVariableException, SyntaxError {
-		variable_table = new Variable[123];
+	public ESPInterpreter(String fileName) throws FileNotFoundException, UndefinedVariableException, SyntaxError {
+		variableTable = new Variable[123];
 		for (int i = 0; i <= 'z'; i++) {
-			variable_table[i] = new Variable();
+			variableTable[i] = new Variable();
 		}
-		Scanner s = new Scanner(new File("src/file.txt"));
-		test(s);
+		Scanner s = new Scanner(new File(fileName));
+		run(s);
 	}
 
 	/**
@@ -56,6 +59,18 @@ public class ESPInterpreter {
 	}
 
 	/**
+	 * Methods to check if the string contains only number Using the Regular
+	 * Expression. Reference:
+	 * https://www.geeksforgeeks.org/check-given-string-valid-number-integer-floating-point-java-set-2-regular-expression-approach/
+	 * 
+	 * @param str from String input
+	 * @return true if it has number
+	 */
+	public static boolean isNumber(String str) {
+		return ((str != null) && (!str.equals("")) && (str.matches("^[0-9]*$")));
+	}
+
+	/**
 	 * Method to check if character is the operator
 	 * 
 	 * @param x character
@@ -82,10 +97,17 @@ public class ESPInterpreter {
 		@SuppressWarnings("resource")
 		Scanner sc = new Scanner(System.in);
 		if (isVariable(s)) {
-			System.out.print("Enter an integer number for variable " + x + ": ");
-			double y = sc.nextDouble();
-			variable_table[x].setValue(y);
+			try {
+				System.out.print("Enter an integer number for variable " + x + ": ");
+				double y = sc.nextDouble();
+				variableTable[x].setValue(y);
+
+			} catch (InputMismatchException e) {
+				System.out.println("Variable must contain number");
+				readLine(s);
+			}
 		}
+
 	}
 
 	/**
@@ -97,7 +119,7 @@ public class ESPInterpreter {
 	 */
 	double getValue(char c) throws UndefinedVariableException {
 		char x = c;
-		double value = variable_table[x].getValue();
+		double value = variableTable[x].getValue();
 		return value;
 	}
 
@@ -112,11 +134,11 @@ public class ESPInterpreter {
 
 		String a = InfixToPostFixCompute.inFixToPostFix(s);
 		if (a.equals("Invalid Expression")) {
-			System.out.println("Line " + LineNo + ": Syntax Error!");
-			System.exit(1);
+			System.out.println("Line " + lineNo + ": Syntax Error!");
+			// System.exit(1);
 		}
 		double value = evaluatePostfix(a);
-		variable_table[c].setValue(value);
+		variableTable[c].setValue(value);
 	}
 
 	/**
@@ -130,7 +152,7 @@ public class ESPInterpreter {
 	public void evaluatePrintLine(String s) throws UndefinedVariableException, SyntaxError {
 		String a = InfixToPostFixCompute.inFixToPostFix(s);
 		double value = evaluatePostfix(a);
-		System.out.println("Line " + LineNo + ": Value of the expression " + s + ": " + value);
+		System.out.println("Line " + lineNo + ": Value of the expression " + s + ": " + value);
 	}
 
 	/**
@@ -143,10 +165,9 @@ public class ESPInterpreter {
 		try {
 			if (isVariable(s)) {
 				char x = s.charAt(0);
-				System.out.println("Line " + LineNo + ": Variable " + x + " is: " + getValue(x));
+				System.out.println("Line " + lineNo + ": Variable " + x + " is: " + getValue(x));
 			}
 		} catch (UndefinedVariableException e) {
-			System.exit(1);
 		}
 
 	}
@@ -162,6 +183,7 @@ public class ESPInterpreter {
 
 		Stack<Double> s = new Stack<Double>();
 		Scanner tokens = new Scanner(exp);
+		double result = 0;
 
 		while (tokens.hasNext()) {
 			String token = tokens.next();
@@ -177,22 +199,22 @@ public class ESPInterpreter {
 			// Check if token is a character
 			else if (isVariable(token)) {
 				try {
-					double a = variable_table[token.charAt(0)].getValue();
+					double a = variableTable[token.charAt(0)].getValue();
 					s.push(a);
 				} catch (UndefinedVariableException e) {
-					System.exit(1);
+					break;
 				}
 			}
 
 			else if (isOperator(token)) {
 				if (s.isEmpty()) {
-					System.out.println("Line: " + LineNo + ": Wrong operation!");
-					System.exit(1);
+					System.out.println("Line: " + lineNo + ": Wrong operation!");
+					break;
 				}
 				double num2 = s.pop();
 				if (s.isEmpty()) {
-					System.out.println("Line: " + LineNo + ": Wrong operation!");
-					System.exit(1);
+					System.out.println("Line: " + lineNo + ": Wrong operation!");
+					break;
 				}
 				double num1 = s.pop();
 
@@ -214,19 +236,17 @@ public class ESPInterpreter {
 				}
 
 			} else {
-				System.out.println("Line: " + LineNo + ": Wrong operation!");
-				System.exit(1);
+				System.out.println("Line: " + lineNo + ": Wrong operation!");
+				return result;
 			}
 		}
 
-		tokens.close();
-		double result = s.pop();
 		if (!s.isEmpty()) {
-			System.out.println("Line: " + LineNo + ": Syntax error!");
-			System.exit(1);
+			result = s.pop();
+			tokens.close();
+			return result;
 		}
 		return result;
-
 	}
 
 	/**
@@ -236,58 +256,64 @@ public class ESPInterpreter {
 	 * @throws UndefinedVariableException
 	 * @throws SyntaxError
 	 */
-	public void test(Scanner s) throws UndefinedVariableException, SyntaxError {
+	public void run(Scanner s) throws UndefinedVariableException, SyntaxError {
 		while (s.hasNextLine()) {
 			line = s.nextLine();
-			LineNo++;
-			String[] tokens;
-			tokens = line.split(" ");
-			char c = tokens[0].charAt(0);
-			String b = "";
 
-			if (tokens[0].equals("read")) {
-				if (tokens.length != 2)
-					throw new SyntaxError();
-				else
-					readLine(tokens[1]); // For example: read a
+			if (line.isBlank()) {
+				continue;
 			}
 
-			else if (tokens[0].equals("print")) {
-				try {
-					if (tokens.length == 2)
-						printLine(tokens[1]); // For example: print a
-					else if (tokens.length > 2) {
-						for (int i = 1; i < tokens.length; i++)
-							b += tokens[i].toString(); // For example: String b = x + y
-						evaluatePrintLine(b); // For example: print x + y
+			else {
+				lineNo++;
+				String[] tokens;
+				tokens = line.split(" ");
+
+				char c = tokens[0].charAt(0);
+				String b = "";
+
+				if (tokens[0].equals("read")) {
+					if (tokens.length != 2)
+						new SyntaxError();
+					else
+						readLine(tokens[1]); // For example: read a
+				}
+
+				else if (tokens[0].equals("print")) {
+					try {
+						if (tokens.length == 2)
+							printLine(tokens[1]); // For example: print a
+						else if (tokens.length > 2) {
+							for (int i = 1; i < tokens.length; i++)
+								b += tokens[i].toString(); // For example: String b = x + y
+							evaluatePrintLine(b); // For example: print x + y
+						}
+					} catch (SyntaxError e) {
 					}
-				} catch (SyntaxError e) {
-					System.exit(1);
+				}
+
+				else if (isVariable(tokens[0])) {
+					try {
+						if (tokens.length < 3)
+							new SyntaxError();
+						if (!tokens[1].equals("=")) {
+							new SyntaxError();
+						}
+
+						for (int i = 2; i < tokens.length; i++) {
+							b += tokens[i].toString();
+						}
+						// Calculate and assign the value to variable
+						evaluateLine(c, b); // For example: a = b + c
+					} catch (UndefinedVariableException e) {
+					}
+				}
+
+				// 2 = x + 2
+				else if (isNumber(tokens[0])) {
+					new UndefinedVariableException();
 				}
 			}
-
-			else if (isVariable(tokens[0])) {
-				try {
-					if (tokens.length < 3)
-						throw new SyntaxError();
-					if (!tokens[1].equals("="))
-						throw new SyntaxError();
-
-					for (int i = 2; i < tokens.length; i++) {
-						b += tokens[i].toString();
-					}
-					// Calculate and assign the value to variable
-					evaluateLine(c, b); // For example: a = b + c
-				} catch (UndefinedVariableException e) {
-					System.exit(1);
-				}
-			}
-
 		}
 	}
-
-	public static void main(String[] args) throws FileNotFoundException, UndefinedVariableException, SyntaxError {
-		new ESPInterpreter();
-	}
-
 }

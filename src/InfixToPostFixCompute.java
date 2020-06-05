@@ -39,7 +39,8 @@ public class InfixToPostFixCompute {
 	}
 
 	/**
-	 * Methods to check if the string contains only number Reference:
+	 * Methods to check if the string contains only number
+	 * Using the Regular Expression. Reference:
 	 * https://www.geeksforgeeks.org/check-given-string-valid-number-integer-floating-point-java-set-2-regular-expression-approach/
 	 * 
 	 * @param str from String input
@@ -88,6 +89,8 @@ public class InfixToPostFixCompute {
 					result += s.pop();
 				}
 				if (!s.isEmpty() && s.peek() != '(')
+					return "Invalid Expression";
+				else if (s.isEmpty())
 					return "Invalid Expression";
 				else {
 					result += " ";

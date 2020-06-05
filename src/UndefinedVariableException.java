@@ -8,7 +8,7 @@ public class UndefinedVariableException extends Exception{
 	//Parameterless Constructor
 	
 	public UndefinedVariableException() {
-		System.out.println("Line " + ESPInterpreter.LineNo + ": Error! Undefined Variable");
+		System.out.println("Line " + ESPInterpreter.lineNo + ": Error! Undefined Variable");
 	}
 	
 	
