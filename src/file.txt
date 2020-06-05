@@ -1,0 +1,6 @@
+read p
+read q
+d = p * p + q * q
+print d
+d = c * d
+print d
